@@ -5,28 +5,13 @@ import (
 	"reflect"
 )
 
-// ElementKind 構文要素の種類を表す型
-type ElementKind int
-
-// 構文要素の種類を表す。シンボルIDの下限値よりも下の整数にしているのでシンボルIDと混ぜて使うことができる。
-const (
-	Symbol ElementKind = MinSymbolID - 1
-	Int    ElementKind = MinSymbolID - 2
-	Float  ElementKind = MinSymbolID - 3
-	String ElementKind = MinSymbolID - 4
-	List   ElementKind = MinSymbolID - 5
-)
-
 // SyntaxElement 構文要素を表す。
 type SyntaxElement interface {
 	Position() Position
-	IsList() bool
 	IntValue() (int64, bool)
 	FloatValue() (float64, bool)
 	StringValue() (string, bool)
 	SymbolValue() (SymbolID, bool)
-	ElementAt(int) SyntaxElement
-	Kind() ElementKind
 }
 
 // ListElement ListElementまたはValueを0個以上含む
@@ -60,16 +45,6 @@ func (lst *ListElement) Len() int {
 // Position lstのソースコード上の位置を返す。
 func (lst *ListElement) Position() Position {
 	return lst.pos
-}
-
-// IsList lstがリストの場合はtrueを返す。
-func (lst *ListElement) IsList() bool {
-	return true
-}
-
-// Kind 要素の種類を返す。
-func (lst *ListElement) Kind() ElementKind {
-	return List
 }
 
 // IntValue lstは整数型の値を持たない。
@@ -136,54 +111,6 @@ func (lst *ListElement) SymbolAt(index int) (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
-// Matches 子要素の種類またはシンボルIDが引数patに合致するかテストする。
-func (lst *ListElement) Matches(pat ...interface{}) bool {
-	if lst.Len() != len(pat) {
-		return false
-	}
-	for i, p := range pat {
-		switch p.(type) {
-		case ElementKind:
-			if lst.ElementAt(i).Kind() != p.(ElementKind) {
-				return false
-			}
-		case SymbolID:
-			if s, ok := lst.ElementAt(i).SymbolValue(); ok {
-				if s != p.(SymbolID) {
-					return false
-				}
-			} else {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// StartWith 子要素の種類またはシンボルIDが引数patで始まるかテストする。
-func (lst *ListElement) StartWith(pat ...interface{}) bool {
-	if lst.Len() < len(pat) {
-		return false
-	}
-	for i, p := range pat {
-		switch p.(type) {
-		case ElementKind:
-			if lst.ElementAt(i).Kind() != p.(ElementKind) {
-				return false
-			}
-		case SymbolID:
-			if s, ok := lst.ElementAt(i).SymbolValue(); ok {
-				if s != p.(SymbolID) {
-					return false
-				}
-			} else {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func newLiteral(value interface{}, filename string, line int, column int) SyntaxElement {
 	switch v := value.(type) {
 	case int64:
@@ -203,18 +130,9 @@ type intElement struct {
 	pos   Position
 }
 
-// IsList eがリストならtrueを返す。
-func (e *intElement) IsList() bool {
-	return false
-}
-
 // Position eのソースコード上の位置を返す。
 func (e *intElement) Position() Position {
 	return e.pos
-}
-
-func (e *intElement) Kind() ElementKind {
-	return Int
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
@@ -237,27 +155,14 @@ func (e *intElement) SymbolValue() (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
-func (e *intElement) ElementAt(_ int) SyntaxElement {
-	return nil
-}
-
 type floatElement struct {
 	value float64
 	pos   Position
 }
 
-// IsList eがリストならtrueを返す。
-func (e *floatElement) IsList() bool {
-	return false
-}
-
 // Position eのソースコード上の位置を返す。
 func (e *floatElement) Position() Position {
 	return e.pos
-}
-
-func (e *floatElement) Kind() ElementKind {
-	return Float
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
@@ -280,27 +185,14 @@ func (e *floatElement) SymbolValue() (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
-func (e *floatElement) ElementAt(_ int) SyntaxElement {
-	return nil
-}
-
 type stringElement struct {
 	value string
 	pos   Position
 }
 
-// IsList eがリストならtrueを返す。
-func (e *stringElement) IsList() bool {
-	return false
-}
-
 // Position eのソースコード上の位置を返す。
 func (e *stringElement) Position() Position {
 	return e.pos
-}
-
-func (e *stringElement) Kind() ElementKind {
-	return String
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
@@ -323,27 +215,14 @@ func (e *stringElement) SymbolValue() (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
-func (e *stringElement) ElementAt(_ int) SyntaxElement {
-	return nil
-}
-
 type symbolIDElement struct {
 	value SymbolID
 	pos   Position
 }
 
-// IsList eがリストならtrueを返す。
-func (e *symbolIDElement) IsList() bool {
-	return false
-}
-
 // Position eのソースコード上の位置を返す。
 func (e *symbolIDElement) Position() Position {
 	return e.pos
-}
-
-func (e *symbolIDElement) Kind() ElementKind {
-	return Symbol
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
@@ -366,6 +245,40 @@ func (e *symbolIDElement) SymbolValue() (SymbolID, bool) {
 	return e.value, true
 }
 
-func (e *symbolIDElement) ElementAt(_ int) SyntaxElement {
-	return nil
+// IsSymbolID 構文要素eがシンボルID idと等しいかテストする
+func IsSymbolID(e SyntaxElement, id SymbolID) bool {
+	if sid, ok := e.SymbolValue(); ok && sid == id {
+		return true
+	}
+	return false
+}
+
+// IsSymbol 構文要素eがシンボルかどうかテストする
+func IsSymbol(e SyntaxElement) bool {
+	_, ok := e.SymbolValue()
+	return ok
+}
+
+// IsList 構文要素eがリストかどうかテストする
+func IsList(e SyntaxElement) bool {
+	_, ok := e.(*ListElement)
+	return ok
+}
+
+// IsInt 構文要素eが整数かどうかテストする
+func IsInt(e SyntaxElement) bool {
+	_, ok := e.(*intElement)
+	return ok
+}
+
+// IsFloat 構文要素eが浮動小数点数かどうかテストする
+func IsFloat(e SyntaxElement) bool {
+	_, ok := e.(*floatElement)
+	return ok
+}
+
+// IsString 構文要素eが文字列かどうかテストする
+func IsString(e SyntaxElement) bool {
+	_, ok := e.(*stringElement)
+	return ok
 }

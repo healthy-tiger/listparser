@@ -14,7 +14,11 @@ func TestList1(t *testing.T) {
 	if len(lists) != 1 || lists[0].Len() != 4 {
 		t.Error("Parse error")
 	}
-	if !lists[0].Matches(symEvent, Symbol, symGoto, Symbol) {
+	lst := lists[0]
+	if !(IsSymbolID(lst.ElementAt(0), symEvent) &&
+		IsSymbol(lst.ElementAt(1)) &&
+		IsSymbolID(lst.ElementAt(2), symGoto) &&
+		IsSymbol(lst.ElementAt(3))) {
 		t.Error("Not matched.")
 	}
 }
@@ -31,7 +35,11 @@ func TestList2(t *testing.T) {
 	if len(lists) != 1 || lists[0].Len() != 4 {
 		t.Error("Parse error")
 	}
-	if lists[0].Matches(symEvent, Int, symGoto, Symbol) {
+	lst := lists[0]
+	if IsSymbolID(lst.ElementAt(0), symEvent) &&
+		IsInt(lst.ElementAt(1)) &&
+		IsSymbolID(lst.ElementAt(2), symGoto) &&
+		IsSymbol(lst.ElementAt(3)) {
 		t.Error("Matched.")
 	}
 }
@@ -48,7 +56,9 @@ func TestList3(t *testing.T) {
 	if len(lists) != 1 || lists[0].Len() != 4 {
 		t.Error("Parse error")
 	}
-	if !lists[0].StartWith(symEvent, symbol) {
+	lst := lists[0]
+	if !(IsSymbolID(lst.ElementAt(0), symEvent) &&
+		IsSymbol(lst.ElementAt(1))) {
 		t.Error("Not matched.")
 	}
 }

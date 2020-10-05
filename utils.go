@@ -1,15 +1,15 @@
 package listparser
 
 type stack struct {
-	entries []*List
+	entries []*ListElement
 	len     int
 }
 
 func newStack() *stack {
-	return &stack{make([]*List, 0), 0}
+	return &stack{make([]*ListElement, 0), 0}
 }
 
-func (s *stack) push(v *List) {
+func (s *stack) push(v *ListElement) {
 	if len(s.entries) >= s.len+1 {
 		s.entries[s.len] = v
 	} else {
@@ -18,7 +18,7 @@ func (s *stack) push(v *List) {
 	s.len = s.len + 1
 }
 
-func (s *stack) pop() *List {
+func (s *stack) pop() *ListElement {
 	if s.len <= 0 {
 		return nil
 	}
@@ -27,7 +27,7 @@ func (s *stack) pop() *List {
 	return v
 }
 
-func (s *stack) peek() *List {
+func (s *stack) peek() *ListElement {
 	if s.len <= 0 {
 		return nil
 	}

@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+// MinSymbolID シンボルIDの最小値
+const MinSymbolID = 10
+
+// InvalidSymbolID 無効なシンボルID(-1)
+const InvalidSymbolID = MinSymbolID - MinSymbolID - 1
+
 // SymbolTable シンボルIDとシンボル名のマップ
 type SymbolTable struct {
 	symbolMap map[string]SymbolID
@@ -22,7 +28,7 @@ func NewSymbolTable() *SymbolTable {
 func (st *SymbolTable) GetSymbolID(name string) SymbolID {
 	n, ok := st.symbolMap[name]
 	if !ok {
-		n = SymbolID(len(st.symbolMap))
+		n = SymbolID(len(st.symbolMap) + MinSymbolID)
 		st.symbolMap[name] = SymbolID(n)
 	}
 	return n
@@ -46,8 +52,8 @@ type Position struct {
 }
 
 // Parse srcをスキャンして*Listの配列を返す。
-func Parse(filename string, st *SymbolTable, src io.Reader) ([]*List, error) {
-	lists := make([]*List, 0)
+func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, error) {
+	lists := make([]*ListElement, 0)
 	stack := newStack()
 	tokenizer, err := newTokenizer(filename, src)
 	if err != nil {
@@ -87,7 +93,7 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*List, error) {
 		default:
 			if tok == leftParenthesis || tok == leftSquareBracket || tok == leftCurlyBracket {
 				lst := stack.peek()
-				lstnew := &List{tok, make([]SyntaxElement, 0), Position{filename, line, column}}
+				lstnew := &ListElement{tok, make([]SyntaxElement, 0), Position{filename, line, column}}
 				if lst != nil {
 					lst.elements = append(lst.elements, lstnew)
 				} else {
@@ -117,7 +123,7 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*List, error) {
 }
 
 // ParseString 文字列をスキャンして*Listの配列を返す。
-func ParseString(filename string, st *SymbolTable, src string) ([]*List, error) {
+func ParseString(filename string, st *SymbolTable, src string) ([]*ListElement, error) {
 	return Parse(filename, st, strings.NewReader(src))
 }
 

@@ -5,6 +5,18 @@ import (
 	"reflect"
 )
 
+// ElementKind 構文要素の種類を表す型
+type ElementKind int
+
+// 構文要素の種類を表す。シンボルIDの下限値よりも下の整数にしているのでシンボルIDと混ぜて使うことができる。
+const (
+	Symbol ElementKind = MinSymbolID - 1
+	Int    ElementKind = MinSymbolID - 2
+	Float  ElementKind = MinSymbolID - 3
+	String ElementKind = MinSymbolID - 4
+	List   ElementKind = MinSymbolID - 5
+)
+
 // SyntaxElement 構文要素を表す。
 type SyntaxElement interface {
 	Position() Position
@@ -14,10 +26,11 @@ type SyntaxElement interface {
 	StringValue() (string, bool)
 	SymbolValue() (SymbolID, bool)
 	ElementAt(int) SyntaxElement
+	Kind() ElementKind
 }
 
-// List ListまたはValueを0個以上含む
-type List struct {
+// ListElement ListElementまたはValueを0個以上含む
+type ListElement struct {
 	openchar rune
 	elements []SyntaxElement
 	pos      Position
@@ -26,14 +39,11 @@ type List struct {
 // SymbolID シンボルのSTreeにおける一意な識別番号
 type SymbolID int
 
-// InvalidSymbolID 無効なシンボルID
-const InvalidSymbolID = -1
-
 const nilInt = 0
 const nilFloat = 0.0
 const emptyString = ""
 
-func (lst *List) isMatchingParen(close rune) bool {
+func (lst *ListElement) isMatchingParen(close rune) bool {
 	if (lst.openchar == leftParenthesis && close == rightParenthesis) ||
 		(lst.openchar == leftSquareBracket && close == rightSquareBracket) ||
 		(lst.openchar == leftCurlyBracket && close == rightCurlyBracket) {
@@ -43,42 +53,47 @@ func (lst *List) isMatchingParen(close rune) bool {
 }
 
 // Len lstの子要素の数を返す。
-func (lst *List) Len() int {
+func (lst *ListElement) Len() int {
 	return len(lst.elements)
 }
 
 // Position lstのソースコード上の位置を返す。
-func (lst *List) Position() Position {
+func (lst *ListElement) Position() Position {
 	return lst.pos
 }
 
 // IsList lstがリストの場合はtrueを返す。
-func (lst *List) IsList() bool {
+func (lst *ListElement) IsList() bool {
 	return true
 }
 
+// Kind 要素の種類を返す。
+func (lst *ListElement) Kind() ElementKind {
+	return List
+}
+
 // IntValue lstは整数型の値を持たない。
-func (lst *List) IntValue() (int64, bool) {
+func (lst *ListElement) IntValue() (int64, bool) {
 	return 0, false
 }
 
 // FloatValue lstは浮動小数点数型の値を持たない。
-func (lst *List) FloatValue() (float64, bool) {
+func (lst *ListElement) FloatValue() (float64, bool) {
 	return 0, false
 }
 
 // StringValue lstは文字列型の値を持たない。
-func (lst *List) StringValue() (string, bool) {
+func (lst *ListElement) StringValue() (string, bool) {
 	return "", false
 }
 
 // SymbolValue lstはシンボルではない。
-func (lst *List) SymbolValue() (SymbolID, bool) {
+func (lst *ListElement) SymbolValue() (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
 // ElementAt lstのindex番目の要素を返す。
-func (lst *List) ElementAt(index int) SyntaxElement {
+func (lst *ListElement) ElementAt(index int) SyntaxElement {
 	if index < 0 || index >= len(lst.elements) {
 		return nil
 	}
@@ -86,7 +101,7 @@ func (lst *List) ElementAt(index int) SyntaxElement {
 }
 
 // IntAt lstのindex番目の要素がint64ならその値を返す。
-func (lst *List) IntAt(index int) (int64, bool) {
+func (lst *ListElement) IntAt(index int) (int64, bool) {
 	se := lst.ElementAt(index)
 	if se != nil {
 		return se.IntValue()
@@ -95,7 +110,7 @@ func (lst *List) IntAt(index int) (int64, bool) {
 }
 
 // FloatAt lstのindex番目の要素がfloat64ならその値を返す。
-func (lst *List) FloatAt(index int) (float64, bool) {
+func (lst *ListElement) FloatAt(index int) (float64, bool) {
 	se := lst.ElementAt(index)
 	if se != nil {
 		return se.FloatValue()
@@ -104,7 +119,7 @@ func (lst *List) FloatAt(index int) (float64, bool) {
 }
 
 // StringAt lstのindex番目の要素がstringならその値を返す。
-func (lst *List) StringAt(index int) (string, bool) {
+func (lst *ListElement) StringAt(index int) (string, bool) {
 	se := lst.ElementAt(index)
 	if se != nil {
 		return se.StringValue()
@@ -113,12 +128,36 @@ func (lst *List) StringAt(index int) (string, bool) {
 }
 
 // SymbolAt lstのindex番目の要素がint64ならその値を返す。
-func (lst *List) SymbolAt(index int) (SymbolID, bool) {
+func (lst *ListElement) SymbolAt(index int) (SymbolID, bool) {
 	se := lst.ElementAt(index)
 	if se != nil {
 		return se.SymbolValue()
 	}
 	return InvalidSymbolID, false
+}
+
+// Matches 子要素の種類またはシンボルIDが引数patに合致するかテストする。
+func (lst *ListElement) Matches(pat ...interface{}) bool {
+	if lst.Len() != len(pat) {
+		return false
+	}
+	for i, p := range pat {
+		switch p.(type) {
+		case ElementKind:
+			if lst.ElementAt(i).Kind() != p.(ElementKind) {
+				return false
+			}
+		case SymbolID:
+			if s, ok := lst.ElementAt(i).SymbolValue(); ok {
+				if s != p.(SymbolID) {
+					return false
+				}
+			} else {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func newLiteral(value interface{}, filename string, line int, column int) SyntaxElement {
@@ -148,6 +187,10 @@ func (e *intElement) IsList() bool {
 // Position eのソースコード上の位置を返す。
 func (e *intElement) Position() Position {
 	return e.pos
+}
+
+func (e *intElement) Kind() ElementKind {
+	return Int
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
@@ -189,6 +232,10 @@ func (e *floatElement) Position() Position {
 	return e.pos
 }
 
+func (e *floatElement) Kind() ElementKind {
+	return Float
+}
+
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
 func (e *floatElement) IntValue() (int64, bool) {
 	return nilInt, false
@@ -228,6 +275,10 @@ func (e *stringElement) Position() Position {
 	return e.pos
 }
 
+func (e *stringElement) Kind() ElementKind {
+	return String
+}
+
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。
 func (e *stringElement) IntValue() (int64, bool) {
 	return nilInt, false
@@ -265,6 +316,10 @@ func (e *symbolIDElement) IsList() bool {
 // Position eのソースコード上の位置を返す。
 func (e *symbolIDElement) Position() Position {
 	return e.pos
+}
+
+func (e *symbolIDElement) Kind() ElementKind {
+	return Symbol
 }
 
 // IntValue eが整数リテラルなら、整数リテラルのint64型の値を返す。

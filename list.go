@@ -160,6 +160,30 @@ func (lst *ListElement) Matches(pat ...interface{}) bool {
 	return true
 }
 
+// StartWith 子要素の種類またはシンボルIDが引数patで始まるかテストする。
+func (lst *ListElement) StartWith(pat ...interface{}) bool {
+	if lst.Len() < len(pat) {
+		return false
+	}
+	for i, p := range pat {
+		switch p.(type) {
+		case ElementKind:
+			if lst.ElementAt(i).Kind() != p.(ElementKind) {
+				return false
+			}
+		case SymbolID:
+			if s, ok := lst.ElementAt(i).SymbolValue(); ok {
+				if s != p.(SymbolID) {
+					return false
+				}
+			} else {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func newLiteral(value interface{}, filename string, line int, column int) SyntaxElement {
 	switch v := value.(type) {
 	case int64:

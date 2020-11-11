@@ -2,9 +2,18 @@ package listparser
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"strings"
 	"unicode/utf8"
+)
+
+// 字句解析エラー
+var (
+	ErrorIllegalLexerState        = errors.New("Illegal lexer state")
+	ErrorUnexpectedEndOfLine      = errors.New("Unexpected end of line")
+	ErrorIllegalCharacterEncoding = errors.New("Illegal character encoding")
+	ErrorIllegalEscapeSequence    = errors.New("Illegal escape sequence '%c'")
 )
 
 const (
@@ -40,7 +49,7 @@ var hexValues = map[rune]int32{
 	'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15,
 }
 
-type stokenizer struct {
+type slexer struct {
 	inputname   string
 	linescanner *bufio.Scanner
 	reader      io.RuneScanner
@@ -49,7 +58,7 @@ type stokenizer struct {
 	column      int
 }
 
-func (ss *stokenizer) nextline() error {
+func (ss *slexer) nextline() error {
 	if ss.linescanner.Scan() {
 		ss.reader = strings.NewReader(ss.linescanner.Text())
 		ss.line = ss.line + 1
@@ -64,7 +73,7 @@ func (ss *stokenizer) nextline() error {
 }
 
 // readString 文字列リテラルの最初の'"'以降の部分をエスケープシーケンスを解釈して文字列を返す。
-func (ss *stokenizer) readString() (string, int, error) {
+func (ss *slexer) readString() (string, int, error) {
 	runes := make([]rune, 0)
 	stat := ctxString
 	nr := 0
@@ -143,10 +152,11 @@ func (ss *stokenizer) readString() (string, int, error) {
 	if sz == 0 || err == io.EOF {
 		return "", nr, ErrorUnexpectedEndOfLine
 	}
+	// 行単位で処理しているので行末以外は符号化のエラーとしていいはず。
 	return "", nr, ErrorIllegalCharacterEncoding
 }
 
-func (ss *stokenizer) readSymbol() (string, int, error) {
+func (ss *slexer) readSymbol() (string, int, error) {
 	rs := make([]rune, 0)
 	nr := 0
 	r, sz, err := ss.reader.ReadRune()
@@ -172,10 +182,11 @@ func (ss *stokenizer) readSymbol() (string, int, error) {
 	if sz == 0 || err == io.EOF { // 行の末尾まで読み込んだ場合、読み込んだ部分までをシンボルとして返す。
 		return string(rs), nr, nil
 	}
+	// 行単位で処理しているので行末以外は符号化のエラーとしていいはず。
 	return "", nr, ErrorIllegalCharacterEncoding
 }
 
-func (ss *stokenizer) readComment() (string, int, error) {
+func (ss *slexer) readComment() (string, int, error) {
 	// 行末まで読み込んで返す。
 	rs := make([]rune, 0)
 	nr := 0
@@ -189,11 +200,12 @@ func (ss *stokenizer) readComment() (string, int, error) {
 	if sz == 0 || err == io.EOF { // readerの末尾に達した場合
 		return string(rs), nr, nil
 	}
+	// 行単位で処理しているので行末以外は符号化のエラーとしていいはず。
 	return "", nr, ErrorIllegalCharacterEncoding
 }
 
-func newTokenizer(inputname string, reader io.Reader) (*stokenizer, error) {
-	ss := &stokenizer{inputname, bufio.NewScanner(reader), nil, "", 0, 0}
+func newLexer(inputname string, reader io.Reader) (*slexer, error) {
+	ss := &slexer{inputname, bufio.NewScanner(reader), nil, "", 0, 0}
 	err := ss.nextline()
 	if err != nil {
 		return nil, err
@@ -209,7 +221,7 @@ const (
 
 // scan 次のトークンを読み込む
 // 読み込んだ文字またはトークンの種類、行番号、列番号、エラー（ある場合は）を返す。
-func (ss *stokenizer) scan() (rune, int, int, error) {
+func (ss *slexer) scan() (rune, int, int, error) {
 	// 現在の行の次の一文字を読み込む
 	r, sz, err := ss.reader.ReadRune()
 
@@ -265,6 +277,6 @@ func (ss *stokenizer) scan() (rune, int, int, error) {
 	}
 }
 
-func (ss *stokenizer) tokentext() string {
+func (ss *slexer) tokentext() string {
 	return ss.lasttext
 }

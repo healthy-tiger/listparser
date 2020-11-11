@@ -1,9 +1,50 @@
 package listparser
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
+
+// ErrorInvalidSymbolID シンボルIDに対応するシンボルが定義されていない。
+var ErrorInvalidSymbolID = errors.New("Invalid symbol ID")
+
+// InvalidSymbolID 無効なシンボルID(-1)
+const InvalidSymbolID = -1
+
+// SymbolID 同じシンボルテーブル内のシンボルの一意な識別番号
+type SymbolID int
+
+// SymbolTable シンボルIDとシンボル名のマップ
+type SymbolTable struct {
+	symbolMap map[string]SymbolID
+}
+
+// NewSymbolTable 新しいSymbolTableを作る。
+func NewSymbolTable() *SymbolTable {
+	return &SymbolTable{make(map[string]SymbolID)}
+}
+
+// GetSymbolID はシンボルnameに対するIDを返す。
+// IDが割り当てられていないシンボルに対しては、新たにIDを割り当てて返す。
+func (st *SymbolTable) GetSymbolID(name string) SymbolID {
+	n, ok := st.symbolMap[name]
+	if !ok {
+		n = SymbolID(len(st.symbolMap))
+		st.symbolMap[name] = SymbolID(n)
+	}
+	return n
+}
+
+// GetSymbolName はシンボルのIDからシンボル名を取得する。
+func (st *SymbolTable) GetSymbolName(id SymbolID) (string, error) {
+	for k, v := range st.symbolMap {
+		if v == id {
+			return k, nil
+		}
+	}
+	return "", ErrorInvalidSymbolID
+}
 
 // SyntaxElement 構文要素を表す。
 type SyntaxElement interface {
@@ -20,9 +61,6 @@ type ListElement struct {
 	elements []SyntaxElement
 	pos      Position
 }
-
-// SymbolID シンボルのSTreeにおける一意な識別番号
-type SymbolID int
 
 const nilInt = 0
 const nilFloat = 0.0
@@ -111,18 +149,18 @@ func (lst *ListElement) SymbolAt(index int) (SymbolID, bool) {
 	return InvalidSymbolID, false
 }
 
-func newLiteral(value interface{}, filename string, line int, column int) SyntaxElement {
+func newLiteral(value interface{}, filename string, line int, column int) (SyntaxElement, error) {
 	switch v := value.(type) {
 	case int64:
-		return &intElement{v, Position{filename, line, column}}
+		return &intElement{v, Position{filename, line, column}}, nil
 	case float64:
-		return &floatElement{v, Position{filename, line, column}}
+		return &floatElement{v, Position{filename, line, column}}, nil
 	case SymbolID:
-		return &symbolIDElement{v, Position{filename, line, column}}
+		return &symbolIDElement{v, Position{filename, line, column}}, nil
 	case string:
-		return &stringElement{v, Position{filename, line, column}}
+		return &stringElement{v, Position{filename, line, column}}, nil
 	}
-	panic(fmt.Sprintf("Unexpected value type: %v", reflect.TypeOf(value)))
+	return nil, fmt.Errorf("Unexpected value type: %v", reflect.TypeOf(value))
 }
 
 type intElement struct {

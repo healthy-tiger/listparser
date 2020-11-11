@@ -54,7 +54,7 @@ func strcmp(a, b string) (bool, int) {
 }
 
 func TestToken1(t *testing.T) {
-	ss, err := newTokenizer("TestToken1", strings.NewReader(src))
+	ss, err := newLexer("TestToken1", strings.NewReader(src))
 	if err != nil {
 		t.Error(err)
 	}

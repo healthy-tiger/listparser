@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -70,7 +71,7 @@ func (ss *stokenizer) readString() (string, int, error) {
 	var oct int32
 	var hex int32
 	r, sz, err := ss.reader.ReadRune()
-	for sz > 0 && err == nil {
+	for r != utf8.RuneError && err == nil {
 		nr++
 		switch stat {
 		case ctxString:
@@ -95,7 +96,7 @@ func (ss *stokenizer) readString() (string, int, error) {
 				} else if r == 'x' {
 					stat = ctxEscHex
 				} else {
-					return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorIllegalEscapeSequence, r)
+					return "", nr, ErrorIllegalEscapeSequence
 				}
 			}
 
@@ -105,7 +106,7 @@ func (ss *stokenizer) readString() (string, int, error) {
 				stat = ctxEscOctet2
 				oct = oct*8 + ov
 			} else {
-				return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorIllegalEscapeSequence, r)
+				return "", nr, ErrorIllegalEscapeSequence
 			}
 
 		case ctxEscOctet2:
@@ -115,7 +116,7 @@ func (ss *stokenizer) readString() (string, int, error) {
 				oct = oct*8 + ov
 				runes = append(runes, oct)
 			} else {
-				return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorIllegalEscapeSequence, r)
+				return "", nr, ErrorIllegalEscapeSequence
 			}
 
 		case ctxEscHex:
@@ -124,7 +125,7 @@ func (ss *stokenizer) readString() (string, int, error) {
 				stat = ctxEscHex1
 				hex = hv
 			} else {
-				return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorIllegalEscapeSequence, r)
+				return "", nr, ErrorIllegalEscapeSequence
 			}
 
 		case ctxEscHex1:
@@ -134,19 +135,22 @@ func (ss *stokenizer) readString() (string, int, error) {
 				hex = hex*16 + hv
 				runes = append(runes, hex)
 			} else {
-				return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorIllegalEscapeSequence, r)
+				return "", nr, ErrorIllegalEscapeSequence
 			}
 		}
 		r, sz, err = ss.reader.ReadRune()
 	}
-	return "", nr, newError(ss.inputname, ss.line, ss.column, ErrorStringLiteralMustBeASingleLine, nil) // 文字列リテラルが行末で閉じられなかった
+	if sz == 0 || err == io.EOF {
+		return "", nr, ErrorUnexpectedEndOfLine
+	}
+	return "", nr, ErrorIllegalCharacterEncoding
 }
 
 func (ss *stokenizer) readSymbol() (string, int, error) {
 	rs := make([]rune, 0)
 	nr := 0
 	r, sz, err := ss.reader.ReadRune()
-	for sz > 0 && err == nil {
+	for r != utf8.RuneError && err == nil {
 		nr++
 		switch r {
 		case tab, space, semicolon, leftParenthesis, leftSquareBracket, leftCurlyBracket, rightParenthesis, rightSquareBracket, rightCurlyBracket:
@@ -164,11 +168,11 @@ func (ss *stokenizer) readSymbol() (string, int, error) {
 		}
 		r, sz, err = ss.reader.ReadRune()
 	}
-	// 行の末尾まで読み込んだ場合、読み込んだ部分までをシンボルとして返す。
-	if sz == 0 || err == io.EOF {
+
+	if sz == 0 || err == io.EOF { // 行の末尾まで読み込んだ場合、読み込んだ部分までをシンボルとして返す。
 		return string(rs), nr, nil
 	}
-	return "", nr, err
+	return "", nr, ErrorIllegalCharacterEncoding
 }
 
 func (ss *stokenizer) readComment() (string, int, error) {
@@ -176,17 +180,16 @@ func (ss *stokenizer) readComment() (string, int, error) {
 	rs := make([]rune, 0)
 	nr := 0
 	r, sz, err := ss.reader.ReadRune()
-	for sz > 0 && err == nil {
+	for r != utf8.RuneError && err == nil {
 		nr++
 		rs = append(rs, r)
 		r, sz, err = ss.reader.ReadRune()
 	}
-	// readerの末尾に達した場合
-	if sz == 0 || err == io.EOF {
+
+	if sz == 0 || err == io.EOF { // readerの末尾に達した場合
 		return string(rs), nr, nil
 	}
-	// その他の理由でエラーになった場合
-	return "", nr, err
+	return "", nr, ErrorIllegalCharacterEncoding
 }
 
 func newTokenizer(inputname string, reader io.Reader) (*stokenizer, error) {
@@ -218,9 +221,11 @@ func (ss *stokenizer) scan() (rune, int, int, error) {
 		}
 		r, sz, err = ss.reader.ReadRune()
 	}
-	if err != nil {
-		// EOF以外のエラーの場合
-		return 0, ss.line, ss.column, err
+	if r == utf8.RuneError && sz > 0 {
+		return 0, ss.line, ss.column, ErrorIllegalCharacterEncoding
+	} else if err != nil {
+		// EOF以外のエラーの場合、行単位で処理しているのでないはず。
+		return 0, ss.line, ss.column, ErrorIllegalCharacterEncoding
 	}
 
 	switch r {
@@ -247,7 +252,7 @@ func (ss *stokenizer) scan() (rune, int, int, error) {
 	default:
 		err = ss.reader.UnreadRune()
 		if err != nil {
-			return 0, ss.line, ss.column, err
+			return 0, ss.line, ss.column, ErrorIllegalLexerState
 		}
 		sl, nr, err := ss.readSymbol()
 		c := ss.column

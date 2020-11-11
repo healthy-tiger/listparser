@@ -12,6 +12,14 @@ var (
 	ErrorUndefinedSymbol          = errors.New("Undefined symbol")
 )
 
+// 字句解析エラー
+var (
+	ErrorIllegalLexerState        = errors.New("Illegal lexer state")
+	ErrorUnexpectedEndOfLine      = errors.New("Unexpected end of line")
+	ErrorIllegalCharacterEncoding = errors.New("Illegal character encoding")
+	ErrorIllegalEscapeSequence    = errors.New("Illegal escape sequence '%c'")
+)
+
 // 構文解析、字句解析のエラーメッセージの定義
 const (
 	ErrorUnmatchedParenthesis           = iota
@@ -20,7 +28,6 @@ const (
 	ErrorInsufficientInput              = iota
 	ErrorFirstElementTypeMustBeASymbol  = iota
 	ErrorStringLiteralMustBeASingleLine = iota
-	ErrorIllegalEscapeSequence          = iota
 	ErrorNotStringLiteral               = iota
 	ErrorTopLevelElementMustBeAList     = iota
 	ErrorMissingClosingParenthesis      = iota
@@ -36,7 +43,6 @@ func init() {
 		ErrorInsufficientInput:              "Insufficient input",
 		ErrorFirstElementTypeMustBeASymbol:  "First element type must be a symbol",
 		ErrorStringLiteralMustBeASingleLine: "String literal must be a single line",
-		ErrorIllegalEscapeSequence:          "Illegal escape sequence '%c'",
 		ErrorNotStringLiteral:               "Not string literal",
 		ErrorTopLevelElementMustBeAList:     "Top-level element must be a list",
 		ErrorMissingClosingParenthesis:      "Missing closing parenthesis",

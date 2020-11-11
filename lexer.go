@@ -25,6 +25,23 @@ const (
 	ctxEscHex1   = iota
 )
 
+const (
+	backslash   = '\\'
+	doublequote = '"'
+	semicolon   = ';'
+)
+
+const (
+	tokTab                = '\t'
+	tokSpace              = ' '
+	tokLeftParenthesis    = '('
+	tokRightParenthesis   = ')'
+	tokLeftSquareBracket  = '['
+	tokRightSquareBracket = ']'
+	tokLeftCurlyBracket   = '{'
+	tokRightCurlyBracket  = '}'
+)
+
 var stdEscSeq = map[rune]rune{
 	'a':  '\x07',
 	'b':  '\x08',
@@ -163,7 +180,7 @@ func (ss *slexer) readSymbol() (string, int, error) {
 	for r != utf8.RuneError && err == nil {
 		nr++
 		switch r {
-		case tab, space, semicolon, leftParenthesis, leftSquareBracket, leftCurlyBracket, rightParenthesis, rightSquareBracket, rightCurlyBracket:
+		case tokTab, tokSpace, semicolon, tokLeftParenthesis, tokLeftSquareBracket, tokLeftCurlyBracket, tokRightParenthesis, tokRightSquareBracket, tokRightCurlyBracket:
 			// 空白かコメントかカッコ（開く又は閉じる）まで読む。
 			// 読み込んじゃった一文字はUnreadRune()で戻しておく
 			err = ss.reader.UnreadRune()
@@ -241,7 +258,7 @@ func (ss *slexer) scan() (rune, int, int, error) {
 	}
 
 	switch r {
-	case leftParenthesis, leftSquareBracket, leftCurlyBracket, rightParenthesis, rightSquareBracket, rightCurlyBracket, tab, space:
+	case tokLeftParenthesis, tokLeftSquareBracket, tokLeftCurlyBracket, tokRightParenthesis, tokRightSquareBracket, tokRightCurlyBracket, tokTab, tokSpace:
 		c := ss.column
 		ss.column = ss.column + 1
 		return r, ss.line, c, nil

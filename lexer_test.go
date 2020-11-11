@@ -19,16 +19,16 @@ var src string = `((abc 123 "hello world")
 (+ 1 2 3) ; comment`
 
 var testresults []tokentest = []tokentest{
-	{leftParenthesis, 1, 1, "", nil},
-	{leftParenthesis, 1, 2, "", nil},
+	{tokLeftParenthesis, 1, 1, "", nil},
+	{tokLeftParenthesis, 1, 2, "", nil},
 	{symbol, 1, 3, "abc", nil},
 	{' ', 1, 6, "", nil},
 	{symbol, 1, 7, "123", nil},
 	{' ', 1, 10, "", nil},
 	{stringLiteral, 1, 11, "hello world", nil},
-	{rightParenthesis, 1, 24, "", nil},
+	{tokRightParenthesis, 1, 24, "", nil},
 	{stringLiteral, 2, 1, "hello lf:\nworld cr:\r octet:\073\nhex:\x30\nbackslash:\\\nsingle quote:'\ndouble quote:\"\nquestion: ?", nil},
-	{leftParenthesis, 3, 1, "", nil},
+	{tokLeftParenthesis, 3, 1, "", nil},
 	{symbol, 3, 2, "+", nil},
 	{' ', 3, 3, "", nil},
 	{symbol, 3, 4, "1", nil},
@@ -36,7 +36,7 @@ var testresults []tokentest = []tokentest{
 	{symbol, 3, 6, "2", nil},
 	{' ', 3, 7, "", nil},
 	{symbol, 3, 8, "3", nil},
-	{rightParenthesis, 3, 9, "", nil},
+	{tokRightParenthesis, 3, 9, "", nil},
 	{' ', 3, 10, "", nil},
 	{commentText, 3, 11, " comment", nil},
 }

@@ -105,7 +105,7 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 		case commentText:
 
 		default:
-			if tok == leftParenthesis || tok == leftSquareBracket || tok == leftCurlyBracket {
+			if tok == tokLeftParenthesis || tok == tokLeftSquareBracket || tok == tokLeftCurlyBracket {
 				lst := stack.peek()
 				lstnew := &ListElement{tok, make([]SyntaxElement, 0), Position{filename, line, column}}
 				if lst != nil {
@@ -114,7 +114,7 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 					lists = append(lists, lstnew)
 				}
 				stack.push(lstnew)
-			} else if tok == rightParenthesis || tok == rightSquareBracket || tok == rightCurlyBracket {
+			} else if tok == tokRightParenthesis || tok == tokRightSquareBracket || tok == tokRightCurlyBracket {
 				lst := stack.peek()
 				if lst == nil {
 					return nil, newParseError(filename, line, column, ErrorUnexpectedClosingParenthesis, nil)
@@ -122,7 +122,7 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 					return nil, newParseError(filename, line, column, ErrorInconsistencyInClosingBrackets, nil)
 				}
 				stack.pop()
-			} else if tok != tab && tok != space {
+			} else if tok != tokTab && tok != tokSpace {
 				return nil, newParseError(filename, line, column, ErrorUnexpectedInputChar, nil)
 			}
 		}

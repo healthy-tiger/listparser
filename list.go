@@ -67,9 +67,9 @@ const nilFloat = 0.0
 const emptyString = ""
 
 func (lst *ListElement) isMatchingParen(close rune) bool {
-	if (lst.openchar == leftParenthesis && close == rightParenthesis) ||
-		(lst.openchar == leftSquareBracket && close == rightSquareBracket) ||
-		(lst.openchar == leftCurlyBracket && close == rightCurlyBracket) {
+	if (lst.openchar == tokLeftParenthesis && close == tokRightParenthesis) ||
+		(lst.openchar == tokLeftSquareBracket && close == tokRightSquareBracket) ||
+		(lst.openchar == tokLeftCurlyBracket && close == tokRightCurlyBracket) {
 		return true
 	}
 	return false

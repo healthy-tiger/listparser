@@ -5,7 +5,7 @@ import "testing"
 func TestParse1(t *testing.T) {
 	src := `(1 2 3)`
 	st := NewSymbolTable()
-	lists, err := ParseString("TestParse1", st, src)
+	lists, err := ParseString("TestParse1", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -41,7 +41,7 @@ func TestParse1(t *testing.T) {
 func TestParse2(t *testing.T) {
 	src := `(1.0 2.0 3.0)`
 	st := NewSymbolTable()
-	lists, err := ParseString("TestParse2", st, src)
+	lists, err := ParseString("TestParse2", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -77,7 +77,7 @@ func TestParse2(t *testing.T) {
 func TestParse3(t *testing.T) {
 	src := `("abc" "def" "ghi")`
 	st := NewSymbolTable()
-	lists, err := ParseString("TestParse3", st, src)
+	lists, err := ParseString("TestParse3", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -113,7 +113,7 @@ func TestParse3(t *testing.T) {
 func TestParse4(t *testing.T) {
 	src := `(abc def ghi)`
 	st := NewSymbolTable()
-	lists, err := ParseString("TestParse3", st, src)
+	lists, err := ParseString("TestParse3", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -150,7 +150,7 @@ func TestParse11(t *testing.T) {
 	st := NewSymbolTable()
 	vals := [][]int64{{1, 2, 3}, {3, 4, 5}}
 
-	lists, err := ParseString("TestParse11", st, src)
+	lists, err := ParseString("TestParse11", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -182,7 +182,7 @@ func TestParse12(t *testing.T) {
 	st := NewSymbolTable()
 	vals := [][]int64{{1, 2, 3}, {3, 4, 5}}
 
-	lists, err := ParseString("TestParse12", st, src)
+	lists, err := ParseString("TestParse12", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -208,7 +208,7 @@ func TestParse13(t *testing.T) {
 	src := `(1 2 3`
 
 	st := NewSymbolTable()
-	_, err := ParseString("TestParse13", st, src)
+	_, err := ParseString("TestParse13", st, src, true, false)
 	if err == nil {
 		t.Error("No parse error")
 	}

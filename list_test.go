@@ -7,7 +7,7 @@ func TestList1(t *testing.T) {
 	st := NewSymbolTable()
 	symEvent := st.GetSymbolID("event")
 	symGoto := st.GetSymbolID("goto")
-	lists, err := ParseString("test1", st, src)
+	lists, err := ParseString("test1", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -28,7 +28,7 @@ func TestList2(t *testing.T) {
 	st := NewSymbolTable()
 	symEvent := st.GetSymbolID("event")
 	symGoto := st.GetSymbolID("goto")
-	lists, err := ParseString("test1", st, src)
+	lists, err := ParseString("test1", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}
@@ -49,7 +49,7 @@ func TestList3(t *testing.T) {
 	st := NewSymbolTable()
 	symEvent := st.GetSymbolID("event")
 	st.GetSymbolID("goto")
-	lists, err := ParseString("test1", st, src)
+	lists, err := ParseString("test1", st, src, true, false)
 	if err != nil {
 		t.Fatalf("Parse error with \"%v\"", err)
 	}

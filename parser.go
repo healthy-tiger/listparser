@@ -66,7 +66,7 @@ type Position struct {
 }
 
 // Parse srcをスキャンして*Listの配列を返す。
-func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, error) {
+func Parse(filename string, st *SymbolTable, src io.Reader, numericType bool, stringAsSymbol bool) ([]*ListElement, error) {
 	lists := make([]*ListElement, 0)
 	stack := newStack()
 	lexer, err := newLexer(filename, src)
@@ -82,17 +82,21 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 			if lst == nil {
 				return nil, newParseError(filename, line, column, ErrorTopLevelElementMustBeAList, nil)
 			}
-			// IntかFloatとして処理できるか先に確認し、どちらもダメならシンボルにする。
-			vi, err := strconv.ParseInt(toktxt, 0, 64)
-			if err == nil {
-				lst.elements = append(lst.elements, &intElement{vi, Position{filename, line, column}})
-			} else {
-				vf, err := strconv.ParseFloat(toktxt, 64)
+			if numericType {
+				// IntかFloatとして処理できるか先に確認し、どちらもダメならシンボルにする。
+				vi, err := strconv.ParseInt(toktxt, 0, 64)
 				if err == nil {
-					lst.elements = append(lst.elements, &floatElement{vf, Position{filename, line, column}})
+					lst.elements = append(lst.elements, &intElement{vi, Position{filename, line, column}})
 				} else {
-					lst.elements = append(lst.elements, &symbolIDElement{st.GetSymbolID(toktxt), Position{filename, line, column}})
+					vf, err := strconv.ParseFloat(toktxt, 64)
+					if err == nil {
+						lst.elements = append(lst.elements, &floatElement{vf, Position{filename, line, column}})
+					} else {
+						lst.elements = append(lst.elements, &symbolIDElement{st.GetSymbolID(toktxt), Position{filename, line, column}})
+					}
 				}
+			} else {
+				lst.elements = append(lst.elements, &symbolIDElement{st.GetSymbolID(toktxt), Position{filename, line, column}})
 			}
 
 		case stringLiteral:
@@ -100,7 +104,11 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 			if lst == nil {
 				return nil, newParseError(filename, line, column, ErrorTopLevelElementMustBeAList, nil)
 			}
-			lst.elements = append(lst.elements, &stringElement{toktxt, Position{filename, line, column}})
+			if stringAsSymbol {
+				lst.elements = append(lst.elements, &symbolIDElement{st.GetSymbolID(toktxt), Position{filename, line, column}})
+			} else {
+				lst.elements = append(lst.elements, &stringElement{toktxt, Position{filename, line, column}})
+			}
 
 		case commentText:
 
@@ -140,8 +148,8 @@ func Parse(filename string, st *SymbolTable, src io.Reader) ([]*ListElement, err
 }
 
 // ParseString 文字列をスキャンして*Listの配列を返す。
-func ParseString(filename string, st *SymbolTable, src string) ([]*ListElement, error) {
-	return Parse(filename, st, strings.NewReader(src))
+func ParseString(filename string, st *SymbolTable, src string, numericType bool, stringAsSymbol bool) ([]*ListElement, error) {
+	return Parse(filename, st, strings.NewReader(src), numericType, stringAsSymbol)
 }
 
 func (p Position) String() string {
